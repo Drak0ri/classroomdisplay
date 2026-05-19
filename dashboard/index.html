@@ -990,6 +990,7 @@
             <thead>
               <tr>
                 <th>#</th>
+                <th>Day</th>
                 <th>Start</th>
                 <th>End</th>
                 <th>Subject</th>
@@ -1392,6 +1393,7 @@ function addDashScheduleRow(data = {}) {
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:rgba(0,0,0,0.3);width:24px;">${rowNum}</td>
+    <td><input value="${data.day || ''}" placeholder="Mon" onchange="syncDashSchedule()"></td>
     <td><input value="${data.start || ''}" placeholder="08:15" onchange="syncDashSchedule()"></td>
     <td><input value="${data.end || ''}" placeholder="09:00" onchange="syncDashSchedule()"></td>
     <td><input value="${data.subject || ''}" placeholder="Maths" onchange="syncDashSchedule()"></td>
@@ -1405,12 +1407,13 @@ function syncDashSchedule() {
   dashSchedule = [];
   document.querySelectorAll('#dash-schedule-tbody tr').forEach(tr => {
     const inputs = tr.querySelectorAll('input');
-    if (inputs.length < 4) return;
+    if (inputs.length < 5) return;
     dashSchedule.push({
-      start: inputs[0].value,
-      end: inputs[1].value,
-      subject: inputs[2].value,
-      teacher: inputs[3].value
+      day:     inputs[0].value,
+      start:   inputs[1].value,
+      end:     inputs[2].value,
+      subject: inputs[3].value,
+      teacher: inputs[4].value
     });
   });
 }
