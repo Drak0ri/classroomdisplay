@@ -1,50 +1,1047 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classroom Display</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IESV Kiosk — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #12325A;
+    --blue: #0e70f4;
+    --red: #e4223d;
+    --cream: #F6F4EF;
+    --green: #1a9e5c;
+    --ink: #0a1a2e;
+    --shadow: 3px 3px 0px var(--ink);
+    --shadow-lg: 5px 5px 0px var(--ink);
+  }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .container {
-            background: white;
-            border-radius: 10px;
-            padding: 40px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            max-width: 600px;
-        }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+  }
 
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-        }
+  /* ---- PIN SCREEN ---- */
+  #pin-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: var(--navy);
+    gap: 2rem;
+  }
 
-        p {
-            color: #666;
-            font-size: 16px;
-            line-height: 1.6;
-        }
-    </style>
+  .pin-logo {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 2rem;
+    color: var(--cream);
+    letter-spacing: -0.5px;
+  }
+
+  .pin-logo span { color: var(--blue); }
+
+  .pin-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: rgba(246,244,239,0.6);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .pin-dots {
+    display: flex;
+    gap: 12px;
+  }
+
+  .pin-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgba(246,244,239,0.4);
+    background: transparent;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .pin-dot.filled {
+    background: var(--blue);
+    border-color: var(--blue);
+  }
+
+  .pin-dot.error {
+    background: var(--red);
+    border-color: var(--red);
+    animation: shake 0.3s ease;
+  }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+
+  .numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 72px);
+    gap: 10px;
+  }
+
+  .numpad-btn {
+    height: 72px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 4px;
+    color: var(--cream);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.1s, transform 0.1s;
+  }
+
+  .numpad-btn:hover { background: rgba(255,255,255,0.15); }
+  .numpad-btn:active { transform: scale(0.94); }
+  .numpad-btn.clear { font-size: 0.9rem; color: rgba(246,244,239,0.5); }
+  .numpad-btn.enter { background: var(--blue); border-color: var(--blue); font-size: 0.9rem; }
+  .numpad-btn.enter:hover { background: #0a5fd4; }
+
+  /* ---- MAIN APP ---- */
+  #app { display: none; }
+
+  .topbar {
+    background: var(--navy);
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .topbar-title {
+    font-weight: 900;
+    font-size: 1.3rem;
+    color: var(--cream);
+  }
+
+  .topbar-title span { color: var(--blue); }
+
+  .topbar-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    background: var(--red);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    box-shadow: var(--shadow);
+  }
+
+  .logout-btn {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.85rem;
+    background: transparent;
+    border: 2px solid rgba(255,255,255,0.3);
+    color: rgba(255,255,255,0.7);
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  /* ---- TABS ---- */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    overflow: hidden;
+    width: fit-content;
+    box-shadow: var(--shadow);
+  }
+
+  .tab {
+    padding: 10px 24px;
+    background: white;
+    border: none;
+    border-right: 2px solid var(--ink);
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: var(--ink);
+    transition: background 0.15s;
+  }
+
+  .tab:last-child { border-right: none; }
+  .tab:hover { background: var(--cream); }
+  .tab.active { background: var(--navy); color: var(--cream); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ---- SECTION CARD ---- */
+  .card {
+    background: white;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+
+  .card-header {
+    background: var(--navy);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-header h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--cream);
+  }
+
+  .card-body { padding: 20px; }
+
+  /* ---- ROOMS GRID ---- */
+  .rooms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .room-card {
+    background: white;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .room-card-header {
+    background: var(--navy);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .room-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--cream);
+  }
+
+  .room-class-badge {
+    font-size: 0.75rem;
+    background: var(--blue);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: 700;
+  }
+
+  .room-card-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  .field-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .field-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: rgba(0,0,0,0.45);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .field-input {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.95rem;
+    padding: 8px 12px;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    background: var(--cream);
+    width: 100%;
+    font-weight: 600;
+  }
+
+  .field-input:focus { outline: none; border-color: var(--blue); }
+
+  .pin-input {
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 6px;
+    font-size: 1.1rem;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #ccc;
+    border-radius: 24px;
+    border: 2px solid var(--ink);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .toggle-slider:before {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: white;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.2s;
+    border: 1px solid rgba(0,0,0,0.2);
+  }
+
+  .toggle input:checked + .toggle-slider { background: var(--green); }
+  .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+  .save-btn {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 8px 16px;
+    background: var(--blue);
+    color: white;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: transform 0.1s, box-shadow 0.1s;
+    width: 100%;
+  }
+
+  .save-btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); }
+  .save-btn:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 var(--ink); }
+  .save-btn.danger { background: var(--red); }
+
+  /* ---- SCHEDULE SECTION ---- */
+  .schedule-room-select {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  .room-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 8px 16px;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: all 0.1s;
+  }
+
+  .room-pill.active { background: var(--navy); color: var(--cream); }
+  .room-pill:hover:not(.active) { background: var(--cream); }
+
+  .schedule-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .upload-zone {
+    border: 2px dashed var(--ink);
+    border-radius: 6px;
+    padding: 2rem;
+    text-align: center;
+    background: var(--cream);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .upload-zone:hover { border-color: var(--blue); background: #eef5ff; }
+  .upload-zone.dragover { border-color: var(--blue); background: #ddeeff; }
+
+  .upload-zone p { font-weight: 600; color: rgba(0,0,0,0.5); margin-top: 0.5rem; font-size: 0.9rem; }
+
+  .upload-icon { font-size: 2rem; }
+
+  .schedule-table-wrap { overflow-x: auto; }
+
+  .schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .schedule-table th {
+    background: var(--navy);
+    color: var(--cream);
+    padding: 8px 12px;
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+  }
+
+  .schedule-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+
+  .schedule-table tr:nth-child(even) td { background: var(--cream); }
+
+  .schedule-table td input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .schedule-table td input:focus { outline: none; background: #eef5ff; border-radius: 3px; }
+
+  .del-row-btn {
+    background: none;
+    border: none;
+    color: var(--red);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 2px 6px;
+  }
+
+  .add-row-btn {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 8px 16px;
+    background: var(--cream);
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+  }
+
+  .add-row-btn:hover { background: white; }
+
+  /* ---- TOAST ---- */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 12px 20px;
+    background: var(--navy);
+    color: var(--cream);
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    box-shadow: var(--shadow-lg);
+    font-weight: 700;
+    font-size: 0.9rem;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { border-left: 4px solid var(--green); }
+  .toast.error { border-left: 4px solid var(--red); }
+
+  /* ---- STATUS INDICATOR ---- */
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    display: inline-block;
+    margin-right: 6px;
+  }
+
+  .status-dot.offline { background: var(--red); }
+
+  /* ---- SCRIPT URL INPUT ---- */
+  .script-url-wrap {
+    background: var(--cream);
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .script-url-wrap label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 6px;
+    color: rgba(0,0,0,0.5);
+  }
+
+  .script-url-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .script-url-row input {
+    flex: 1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    background: white;
+  }
+
+  .script-url-row button {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 8px 16px;
+    background: var(--blue);
+    color: white;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    white-space: nowrap;
+  }
+
+  .info-box {
+    background: #eef5ff;
+    border: 2px solid var(--blue);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  .info-box strong { color: var(--blue); }
+
+  @media (max-width: 600px) {
+    .main { padding: 1rem; }
+    .rooms-grid { grid-template-columns: 1fr; }
+    .numpad { grid-template-columns: repeat(3, 64px); }
+    .numpad-btn { height: 64px; }
+  }
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>Welcome to Classroom Display</h1>
-        <p>This is your classroom display application.</p>
+
+<!-- ============================================================ -->
+<!-- PIN SCREEN -->
+<!-- ============================================================ -->
+<div id="pin-screen">
+  <div class="pin-logo">IESV <span>Kiosk</span></div>
+  <div class="pin-label">Admin Access</div>
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+  </div>
+  <div class="numpad" id="numpad">
+    <button class="numpad-btn" onclick="pinKey('1')">1</button>
+    <button class="numpad-btn" onclick="pinKey('2')">2</button>
+    <button class="numpad-btn" onclick="pinKey('3')">3</button>
+    <button class="numpad-btn" onclick="pinKey('4')">4</button>
+    <button class="numpad-btn" onclick="pinKey('5')">5</button>
+    <button class="numpad-btn" onclick="pinKey('6')">6</button>
+    <button class="numpad-btn" onclick="pinKey('7')">7</button>
+    <button class="numpad-btn" onclick="pinKey('8')">8</button>
+    <button class="numpad-btn" onclick="pinKey('9')">9</button>
+    <button class="numpad-btn clear" onclick="pinClear()">CLR</button>
+    <button class="numpad-btn" onclick="pinKey('0')">0</button>
+    <button class="numpad-btn enter" onclick="pinEnter()">GO</button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- MAIN APP -->
+<!-- ============================================================ -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-title">IESV <span>Kiosk</span> Admin</div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="topbar-badge">ADMIN</span>
+      <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
+  </div>
+
+  <div class="main">
+
+    <!-- Script URL config -->
+    <div class="script-url-wrap">
+      <label>Apps Script Web App URL</label>
+      <div class="script-url-row">
+        <input type="text" id="script-url-input" placeholder="https://script.google.com/macros/s/YOUR_ID/exec">
+        <button onclick="saveScriptUrl()">Save URL</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('rooms')">Rooms</button>
+      <button class="tab" onclick="switchTab('schedules')">Schedules</button>
+      <button class="tab" onclick="switchTab('setup')">Setup</button>
+    </div>
+
+    <!-- ---- ROOMS TAB ---- -->
+    <div class="tab-content active" id="tab-rooms">
+      <div class="rooms-grid" id="rooms-grid">
+        <div style="padding:2rem;color:rgba(0,0,0,0.4);font-style:italic;">Loading rooms...</div>
+      </div>
+    </div>
+
+    <!-- ---- SCHEDULES TAB ---- -->
+    <div class="tab-content" id="tab-schedules">
+      <div class="card">
+        <div class="card-header"><h2>📅 Class Schedules</h2></div>
+        <div class="card-body">
+          <div class="info-box" style="margin-bottom:1.5rem;">
+            <strong>Format:</strong> Upload a Lessons.txt / CSV file, or manually edit below.
+            Each row: <strong>Period, StartTime, EndTime, Subject, Teacher</strong>
+          </div>
+          <div class="schedule-room-select" id="schedule-room-pills"></div>
+          <div class="schedule-editor">
+            <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+              <div class="upload-icon">📂</div>
+              <p>Click to upload Lessons.txt / CSV — or drag and drop</p>
+            </div>
+            <input type="file" id="file-input" accept=".txt,.csv" style="display:none" onchange="handleFileUpload(event)">
+            <div class="schedule-table-wrap">
+              <table class="schedule-table" id="schedule-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Period</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Subject</th>
+                    <th>Teacher</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="schedule-tbody"></tbody>
+              </table>
+            </div>
+            <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+              <button class="add-row-btn" onclick="addScheduleRow()">+ Add Lesson</button>
+              <button class="save-btn" style="max-width:200px;" onclick="saveSchedule()">💾 Save Schedule</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- SETUP TAB ---- -->
+    <div class="tab-content" id="tab-setup">
+      <div class="card">
+        <div class="card-header"><h2>⚙️ Setup Guide</h2></div>
+        <div class="card-body">
+          <div class="info-box">
+            <strong>Step 1:</strong> Create a new Google Sheet in your barryjshaw account.<br>
+            <strong>Step 2:</strong> Copy the Sheet ID from the URL and paste it into apps-script.gs.<br>
+            <strong>Step 3:</strong> Create a new Apps Script project (script.google.com), paste apps-script.gs, deploy as Web App.<br>
+            &nbsp;&nbsp;— Execute as: <strong>Me</strong> | Access: <strong>Anyone</strong><br>
+            <strong>Step 4:</strong> Copy the deployment URL and paste it into the field above.<br>
+            <strong>Step 5:</strong> Click Save URL, then load rooms.<br><br>
+            <strong>Kiosk Mode:</strong> In Google Admin Console → Device Management → Kiosk Apps → add the wall screen URL for each device.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIG — stored in localStorage
+// ============================================================
+const SHARED_SECRET = 'iesv-kiosk-2025';
+const ROOMS = ['D40','D41','D42','D43','D44','D45'];
+let SCRIPT_URL = localStorage.getItem('kiosk_script_url') || '';
+let adminPin = '';
+let currentScheduleRoom = ROOMS[0];
+let scheduleData = {}; // room -> array of lesson rows
+
+// ============================================================
+// PIN SCREEN
+// ============================================================
+function pinKey(k) {
+  if (adminPin.length >= 6) return;
+  adminPin += k;
+  updatePinDots();
+  if (adminPin.length === 6) setTimeout(pinEnter, 100);
+}
+
+function pinClear() {
+  adminPin = adminPin.slice(0, -1);
+  updatePinDots();
+}
+
+function updatePinDots(error = false) {
+  document.querySelectorAll('.pin-dot').forEach((d, i) => {
+    d.classList.toggle('filled', i < adminPin.length);
+    d.classList.toggle('error', error);
+  });
+}
+
+async function pinEnter() {
+  if (!SCRIPT_URL) {
+    // Allow local-only mode with hardcoded check for setup
+    bootApp();
+    return;
+  }
+  try {
+    const res = await api('POST', { action: 'verifyAdminPin', pin: adminPin });
+    if (res.ok) {
+      bootApp();
+    } else {
+      adminPin = '';
+      updatePinDots(true);
+      setTimeout(() => updatePinDots(false), 600);
+    }
+  } catch {
+    // If no script URL, allow entry for setup
+    bootApp();
+  }
+}
+
+function bootApp() {
+  document.getElementById('pin-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('script-url-input').value = SCRIPT_URL;
+  loadRooms();
+  buildSchedulePills();
+}
+
+function logout() {
+  adminPin = '';
+  document.getElementById('pin-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+// ============================================================
+// API
+// ============================================================
+async function api(method, body = {}, params = {}) {
+  if (!SCRIPT_URL) throw new Error('No script URL configured');
+  const secret = SHARED_SECRET;
+  if (method === 'GET') {
+    const q = new URLSearchParams({ secret, ...params });
+    const res = await fetch(`${SCRIPT_URL}?${q}`);
+    return res.json();
+  } else {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ secret, ...body })
+    });
+    return res.json();
+  }
+}
+
+function saveScriptUrl() {
+  const val = document.getElementById('script-url-input').value.trim();
+  SCRIPT_URL = val;
+  localStorage.setItem('kiosk_script_url', val);
+  showToast('Script URL saved', 'success');
+  loadRooms();
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['rooms','schedules','setup'][i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+}
+
+// ============================================================
+// ROOMS
+// ============================================================
+async function loadRooms() {
+  const grid = document.getElementById('rooms-grid');
+  grid.innerHTML = '<div style="padding:1rem;color:rgba(0,0,0,0.4);">Loading...</div>';
+
+  let config = {};
+  try {
+    config = await api('GET', {}, { action: 'getConfig' });
+  } catch {
+    config = {};
+  }
+
+  grid.innerHTML = '';
+  ROOMS.forEach(room => {
+    const cls = config[`room_class_${room}`] || '';
+    const pin = config[`room_pin_${room}`] || '0000';
+    const enabled = config[`room_enabled_${room}`] !== 'false';
+
+    const card = document.createElement('div');
+    card.className = 'room-card';
+    card.innerHTML = `
+      <div class="room-card-header">
+        <span class="room-id">${room}</span>
+        ${cls ? `<span class="room-class-badge">${cls}</span>` : '<span class="room-class-badge" style="background:rgba(255,255,255,0.2);">Unassigned</span>'}
+      </div>
+      <div class="room-card-body">
+        <div class="field-row">
+          <span class="field-label">Class Name</span>
+          <input class="field-input" id="cls_${room}" type="text" value="${cls}" placeholder="e.g. 4A">
+        </div>
+        <div class="field-row">
+          <span class="field-label">Teacher PIN (4 digit)</span>
+          <input class="field-input pin-input" id="pin_${room}" type="text" maxlength="4" value="${pin}" placeholder="0000">
+        </div>
+        <div class="toggle-row">
+          <span class="field-label" style="margin:0;">Room Enabled</span>
+          <label class="toggle">
+            <input type="checkbox" id="ena_${room}" ${enabled ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <button class="save-btn" onclick="saveRoom('${room}')">Save ${room}</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+async function saveRoom(room) {
+  const cls = document.getElementById(`cls_${room}`).value.trim();
+  const pin = document.getElementById(`pin_${room}`).value.trim();
+  const enabled = document.getElementById(`ena_${room}`).checked;
+
+  if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+    showToast('PIN must be exactly 4 digits', 'error');
+    return;
+  }
+
+  try {
+    await api('POST', {
+      action: 'updateConfig',
+      pin: adminPin,
+      config: {
+        [`room_class_${room}`]: cls,
+        [`room_enabled_${room}`]: enabled ? 'true' : 'false'
+      }
+    });
+    await api('POST', {
+      action: 'setRoomPin',
+      pin: adminPin,
+      room,
+      newPin: pin
+    });
+    showToast(`${room} saved`, 'success');
+    loadRooms();
+  } catch (e) {
+    showToast('Save failed: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
+// SCHEDULES
+// ============================================================
+function buildSchedulePills() {
+  const wrap = document.getElementById('schedule-room-pills');
+  wrap.innerHTML = '';
+  ROOMS.forEach((room, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'room-pill' + (i === 0 ? ' active' : '');
+    btn.textContent = room;
+    btn.onclick = () => selectScheduleRoom(room, btn);
+    wrap.appendChild(btn);
+  });
+  loadScheduleForRoom(ROOMS[0]);
+}
+
+function selectScheduleRoom(room, btn) {
+  currentScheduleRoom = room;
+  document.querySelectorAll('.room-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  loadScheduleForRoom(room);
+}
+
+async function loadScheduleForRoom(room) {
+  if (scheduleData[room]) { renderScheduleTable(scheduleData[room]); return; }
+  try {
+    const res = await api('GET', {}, { action: 'getSchedule', room });
+    scheduleData[room] = res.schedule || [];
+    renderScheduleTable(scheduleData[room]);
+  } catch {
+    scheduleData[room] = [];
+    renderScheduleTable([]);
+  }
+}
+
+function renderScheduleTable(rows) {
+  const tbody = document.getElementById('schedule-tbody');
+  tbody.innerHTML = '';
+  rows.forEach((row, i) => addScheduleRow(row, i));
+}
+
+function addScheduleRow(data = {}, idx = null) {
+  const tbody = document.getElementById('schedule-tbody');
+  const rowCount = tbody.rows.length;
+  const i = idx !== null ? idx : rowCount;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:rgba(0,0,0,0.35);width:30px;">${i + 1}</td>
+    <td><input value="${data.period || ''}" placeholder="1" onchange="syncSchedule()"></td>
+    <td><input value="${data.start || ''}" placeholder="08:15" onchange="syncSchedule()"></td>
+    <td><input value="${data.end || ''}" placeholder="09:00" onchange="syncSchedule()"></td>
+    <td><input value="${data.subject || ''}" placeholder="Maths" onchange="syncSchedule()"></td>
+    <td><input value="${data.teacher || ''}" placeholder="Mr Shaw" onchange="syncSchedule()"></td>
+    <td><button class="del-row-btn" onclick="this.closest('tr').remove();syncSchedule()">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function syncSchedule() {
+  const rows = [];
+  document.querySelectorAll('#schedule-tbody tr').forEach(tr => {
+    const inputs = tr.querySelectorAll('input');
+    rows.push({
+      period: inputs[0].value,
+      start: inputs[1].value,
+      end: inputs[2].value,
+      subject: inputs[3].value,
+      teacher: inputs[4].value
+    });
+  });
+  scheduleData[currentScheduleRoom] = rows;
+}
+
+async function saveSchedule() {
+  syncSchedule();
+  try {
+    const res = await api('POST', {
+      action: 'uploadSchedule',
+      pin: adminPin,
+      room: currentScheduleRoom,
+      schedule: scheduleData[currentScheduleRoom]
+    });
+    showToast(`Schedule saved (${res.count} lessons)`, 'success');
+  } catch (e) {
+    showToast('Save failed: ' + e.message, 'error');
+  }
+}
+
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    const parsed = parseLessonsFile(text);
+    scheduleData[currentScheduleRoom] = parsed;
+    renderScheduleTable(parsed);
+    showToast(`Parsed ${parsed.length} lessons`, 'success');
+  };
+  reader.readAsText(file);
+}
+
+// Drag and drop
+const uploadZone = document.getElementById('upload-zone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const parsed = parseLessonsFile(ev.target.result);
+      scheduleData[currentScheduleRoom] = parsed;
+      renderScheduleTable(parsed);
+      showToast(`Parsed ${parsed.length} lessons`, 'success');
+    };
+    reader.readAsText(file);
+  }
+});
+
+function parseLessonsFile(text) {
+  const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('#'));
+  return lines.map(line => {
+    // Try comma-separated first, then tab, then pipe
+    const sep = line.includes(',') ? ',' : line.includes('\t') ? '\t' : '|';
+    const parts = line.split(sep).map(p => p.trim());
+    return {
+      period: parts[0] || '',
+      start:  parts[1] || '',
+      end:    parts[2] || '',
+      subject: parts[3] || '',
+      teacher: parts[4] || ''
+    };
+  });
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+let toastTimer;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Keyboard support for PIN
+document.addEventListener('keydown', e => {
+  if (document.getElementById('pin-screen').style.display === 'none') return;
+  if (e.key >= '0' && e.key <= '9') pinKey(e.key);
+  if (e.key === 'Backspace') pinClear();
+  if (e.key === 'Enter') pinEnter();
+});
+</script>
 </body>
 </html>
