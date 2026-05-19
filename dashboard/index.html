@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>IESV Kiosk — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #12325A;
+    --blue: #0e70f4;
+    --red: #e4223d;
+    --cream: #F6F4EF;
+    --green: #1a9e5c;
+    --amber: #f59e0b;
+    --ink: #0a1a2e;
+    --shadow: 3px 3px 0px var(--ink);
+    --shadow-sm: 2px 2px 0px var(--ink);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ---- ROOM SELECT SCREEN ---- */
+  #room-screen {
+    min-height: 100vh;
+    background: var(--navy);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    padding: 2rem;
+  }
+
+  .logo {
+    font-weight: 900;
+    font-size: 1.8rem;
+    color: var(--cream);
+  }
+
+  .logo span { color: var(--blue); }
+
+  .room-select-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: rgba(246,244,239,0.5);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .room-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 100px);
+    gap: 12px;
+  }
+
+  .room-btn {
+    height: 80px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .room-btn:hover { background: rgba(255,255,255,0.18); border-color: var(--blue); }
+  .room-btn:active { transform: scale(0.95); }
+
+  .room-btn .class-name {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--blue);
+  }
+
+  /* ---- PIN SCREEN ---- */
+  #pin-screen {
+    min-height: 100vh;
+    background: var(--navy);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 2rem;
+  }
+
+  .pin-room-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--cream);
+  }
+
+  .pin-sublabel {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: rgba(246,244,239,0.45);
+    letter-spacing: 2px;
+  }
+
+  .pin-dots {
+    display: flex;
+    gap: 14px;
+  }
+
+  .pin-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(246,244,239,0.35);
+    transition: all 0.15s;
+  }
+
+  .pin-dot.filled { background: var(--blue); border-color: var(--blue); }
+  .pin-dot.error { background: var(--red); border-color: var(--red); animation: shake 0.3s ease; }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  .numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 72px);
+    gap: 10px;
+  }
+
+  .numpad-btn {
+    height: 72px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.1s, transform 0.1s;
+  }
+
+  .numpad-btn:hover { background: rgba(255,255,255,0.15); }
+  .numpad-btn:active { transform: scale(0.93); }
+  .numpad-btn.clear { font-size: 0.85rem; color: rgba(246,244,239,0.45); }
+  .numpad-btn.enter { background: var(--blue); border-color: var(--blue); font-size: 0.85rem; }
+
+  .back-link {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.85rem;
+    color: rgba(246,244,239,0.4);
+    cursor: pointer;
+    background: none;
+    border: none;
+    margin-top: 0.5rem;
+  }
+
+  .back-link:hover { color: rgba(246,244,239,0.7); }
+
+  /* ---- MAIN DASHBOARD ---- */
+  #dashboard {
+    display: none;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .dash-header {
+    background: var(--navy);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .dash-room {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dash-room-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--cream);
+  }
+
+  .dash-class {
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: var(--blue);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 3px;
+  }
+
+  .dash-back {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.85rem;
+    background: transparent;
+    border: 2px solid rgba(255,255,255,0.25);
+    color: rgba(255,255,255,0.6);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .dash-back:hover { border-color: var(--red); color: var(--red); }
+
+  .dash-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* ---- WIDGET SELECTOR ---- */
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(0,0,0,0.4);
+    margin-bottom: 10px;
+  }
+
+  .widget-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .widget-btn {
+    padding: 1.2rem 1rem;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.15s;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .widget-btn:hover { transform: translate(-1px,-1px); box-shadow: var(--shadow); }
+  .widget-btn:active { transform: translate(1px,1px); box-shadow: none; }
+
+  .widget-btn.active {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: var(--cream);
+    box-shadow: var(--shadow);
+  }
+
+  .widget-btn .w-icon { font-size: 1.5rem; line-height: 1; }
+  .widget-btn .w-name { font-weight: 700; font-size: 0.95rem; margin-top: 4px; }
+  .widget-btn .w-desc { font-size: 0.75rem; opacity: 0.55; font-weight: 600; }
+  .widget-btn.active .w-desc { opacity: 0.7; }
+
+  /* ---- PANELS ---- */
+  .panel {
+    background: white;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    display: none;
+  }
+
+  .panel.visible { display: block; }
+
+  .panel-header {
+    background: var(--navy);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-header h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--cream);
+  }
+
+  .panel-body { padding: 1.2rem; display: flex; flex-direction: column; gap: 1rem; }
+
+  /* ---- COUNTDOWN ---- */
+  .countdown-display {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    background: var(--cream);
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+  }
+
+  .countdown-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1;
+  }
+
+  .countdown-time.running { color: var(--green); }
+  .countdown-time.paused { color: var(--amber); }
+  .countdown-time.done { color: var(--red); }
+
+  .countdown-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(0,0,0,0.35);
+    margin-top: 6px;
+  }
+
+  .time-setter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .time-setter label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: rgba(0,0,0,0.45);
+    letter-spacing: 1px;
+    min-width: 60px;
+  }
+
+  .time-input {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 8px 12px;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    background: var(--cream);
+    width: 80px;
+    text-align: center;
+  }
+
+  .time-input:focus { outline: none; border-color: var(--blue); }
+
+  .quick-times {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .quick-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 6px 10px;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    background: var(--cream);
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.1s;
+  }
+
+  .quick-btn:hover { background: var(--navy); color: var(--cream); }
+  .quick-btn:active { transform: scale(0.94); }
+
+  .ctrl-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 8px;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.12s;
+    background: white;
+  }
+
+  .ctrl-btn:hover { transform: translate(-1px,-1px); box-shadow: var(--shadow); }
+  .ctrl-btn:active { transform: translate(1px,1px); box-shadow: none; }
+  .ctrl-btn.start { background: var(--green); color: white; border-color: var(--ink); }
+  .ctrl-btn.pause { background: var(--amber); color: white; }
+  .ctrl-btn.reset { background: var(--cream); }
+  .ctrl-btn.stop  { background: var(--red); color: white; }
+
+  .end-action-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .radio-pill {
+    position: relative;
+  }
+
+  .radio-pill input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .radio-pill label {
+    display: block;
+    padding: 6px 12px;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--cream);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.1s;
+  }
+
+  .radio-pill input:checked + label {
+    background: var(--navy);
+    color: var(--cream);
+  }
+
+  /* ---- SOUND METER ---- */
+  .sound-section { display: flex; flex-direction: column; gap: 1rem; }
+
+  .slider-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .slider-header label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: rgba(0,0,0,0.45);
+    letter-spacing: 1px;
+  }
+
+  .slider-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--navy);
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    background: var(--cream);
+    border: 2px solid var(--ink);
+    border-radius: 3px;
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--blue);
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .style-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .style-card {
+    position: relative;
+  }
+
+  .style-card input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .style-card label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    background: var(--cream);
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+    transition: all 0.1s;
+  }
+
+  .style-card label .style-icon { font-size: 1.5rem; }
+
+  .style-card input:checked + label {
+    background: var(--navy);
+    color: var(--cream);
+    box-shadow: var(--shadow);
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-top: 1px solid rgba(0,0,0,0.08);
+  }
+
+  .toggle-row span {
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #ccc;
+    border-radius: 24px;
+    border: 2px solid var(--ink);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .toggle-slider:before {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: white;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.2s;
+  }
+
+  .toggle input:checked + .toggle-slider { background: var(--green); }
+  .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+  .alert-msg-input {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.95rem;
+    padding: 8px 12px;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    background: var(--cream);
+    width: 100%;
+    font-weight: 600;
+  }
+
+  .alert-msg-input:focus { outline: none; border-color: var(--blue); }
+
+  /* ---- PUSH BUTTON ---- */
+  .push-btn {
+    width: 100%;
+    padding: 14px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 1rem;
+    background: var(--blue);
+    color: white;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: all 0.12s;
+    letter-spacing: 0.5px;
+  }
+
+  .push-btn:hover { transform: translate(-1px,-1px); box-shadow: var(--shadow-lg, 5px 5px 0 var(--ink)); }
+  .push-btn:active { transform: translate(2px,2px); box-shadow: none; }
+  .push-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ---- STATUS BAR ---- */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: rgba(0,0,0,0.45);
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    display: inline-block;
+    margin-right: 5px;
+  }
+
+  .status-dot.err { background: var(--red); }
+
+  /* ---- TOAST ---- */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    padding: 10px 20px;
+    background: var(--navy);
+    color: var(--cream);
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    font-weight: 700;
+    font-size: 0.85rem;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 9999;
+    white-space: nowrap;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.ok { border-left: 4px solid var(--green); }
+  .toast.err { border-left: 4px solid var(--red); }
+
+  @media (max-width: 400px) {
+    .widget-grid { grid-template-columns: 1fr 1fr; }
+    .room-grid { grid-template-columns: repeat(2, 100px); }
+    .ctrl-btn { min-width: 60px; font-size: 0.78rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- ROOM SELECT -->
+<!-- ============================================================ -->
+<div id="room-screen">
+  <div class="logo">IESV <span>Kiosk</span></div>
+  <div class="room-select-label">Select your room</div>
+  <div class="room-grid" id="room-grid">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PIN -->
+<!-- ============================================================ -->
+<div id="pin-screen">
+  <div class="pin-room-label" id="pin-room-label">D40</div>
+  <div class="pin-sublabel">Enter room PIN</div>
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+  </div>
+  <div class="numpad">
+    <button class="numpad-btn" onclick="pinKey('1')">1</button>
+    <button class="numpad-btn" onclick="pinKey('2')">2</button>
+    <button class="numpad-btn" onclick="pinKey('3')">3</button>
+    <button class="numpad-btn" onclick="pinKey('4')">4</button>
+    <button class="numpad-btn" onclick="pinKey('5')">5</button>
+    <button class="numpad-btn" onclick="pinKey('6')">6</button>
+    <button class="numpad-btn" onclick="pinKey('7')">7</button>
+    <button class="numpad-btn" onclick="pinKey('8')">8</button>
+    <button class="numpad-btn" onclick="pinKey('9')">9</button>
+    <button class="numpad-btn clear" onclick="pinClear()">CLR</button>
+    <button class="numpad-btn" onclick="pinKey('0')">0</button>
+    <button class="numpad-btn enter" onclick="pinEnter()">GO</button>
+  </div>
+  <button class="back-link" onclick="showRoomScreen()">← Back</button>
+</div>
+
+<!-- ============================================================ -->
+<!-- DASHBOARD -->
+<!-- ============================================================ -->
+<div id="dashboard">
+  <div class="dash-header">
+    <div class="dash-room">
+      <span class="dash-room-id" id="dash-room-id">D40</span>
+      <span class="dash-class" id="dash-class">—</span>
+    </div>
+    <button class="dash-back" onclick="showRoomScreen()">Change Room</button>
+  </div>
+
+  <div class="dash-body">
+
+    <!-- Status -->
+    <div class="status-bar">
+      <span><span class="status-dot" id="status-dot"></span><span id="status-text">Connected</span></span>
+      <span id="status-updated">—</span>
+    </div>
+
+    <!-- Widget Selector -->
+    <div>
+      <div class="section-label">Display Widget</div>
+      <div class="widget-grid">
+        <button class="widget-btn active" id="wbtn-clock" onclick="selectWidget('clock')">
+          <span class="w-icon">🕐</span>
+          <span class="w-name">Clock</span>
+          <span class="w-desc">Time display</span>
+        </button>
+        <button class="widget-btn" id="wbtn-nownext" onclick="selectWidget('nownext')">
+          <span class="w-icon">📅</span>
+          <span class="w-name">Now & Next</span>
+          <span class="w-desc">Lesson schedule</span>
+        </button>
+        <button class="widget-btn" id="wbtn-countdown" onclick="selectWidget('countdown')">
+          <span class="w-icon">⏱️</span>
+          <span class="w-name">Countdown</span>
+          <span class="w-desc">Timer</span>
+        </button>
+        <button class="widget-btn" id="wbtn-sound" onclick="selectWidget('sound')">
+          <span class="w-icon">🎙️</span>
+          <span class="w-name">Sound Meter</span>
+          <span class="w-desc">Noise level</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Countdown Panel -->
+    <div class="panel" id="panel-countdown">
+      <div class="panel-header"><h3>⏱️ Countdown Timer</h3></div>
+      <div class="panel-body">
+
+        <div class="countdown-display">
+          <div class="countdown-time" id="cd-display">00:00</div>
+          <div class="countdown-status" id="cd-status">NOT STARTED</div>
+        </div>
+
+        <div>
+          <div class="section-label" style="margin-bottom:8px;">Quick Set</div>
+          <div class="quick-times">
+            <button class="quick-btn" onclick="setQuickTime(5)">5m</button>
+            <button class="quick-btn" onclick="setQuickTime(10)">10m</button>
+            <button class="quick-btn" onclick="setQuickTime(15)">15m</button>
+            <button class="quick-btn" onclick="setQuickTime(20)">20m</button>
+            <button class="quick-btn" onclick="setQuickTime(30)">30m</button>
+            <button class="quick-btn" onclick="setQuickTime(45)">45m</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-label" style="margin-bottom:8px;">Custom Time</div>
+          <div class="time-setter">
+            <label>MINS</label>
+            <input class="time-input" id="cd-mins" type="number" min="0" max="99" value="5">
+            <label>SECS</label>
+            <input class="time-input" id="cd-secs" type="number" min="0" max="59" value="0">
+          </div>
+        </div>
+
+        <div class="ctrl-row">
+          <button class="ctrl-btn start" id="cd-start-btn" onclick="cdStart()">▶ Start</button>
+          <button class="ctrl-btn pause" id="cd-pause-btn" onclick="cdPause()" disabled>⏸ Pause</button>
+          <button class="ctrl-btn reset" onclick="cdReset()">↺ Reset</button>
+          <button class="ctrl-btn stop" onclick="cdStop()">■ Stop</button>
+        </div>
+
+        <div class="end-action-row">
+          <div class="section-label">When timer ends</div>
+          <div class="radio-group">
+            <div class="radio-pill">
+              <input type="radio" name="endaction" id="ea-clock" value="clock" checked>
+              <label for="ea-clock">🕐 Show Clock</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" name="endaction" id="ea-nownext" value="nownext">
+              <label for="ea-nownext">📅 Show Now & Next</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" name="endaction" id="ea-flash" value="flash">
+              <label for="ea-flash">🔴 Flash Red</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" name="endaction" id="ea-stay" value="stay">
+              <label for="ea-stay">⏱ Stay on 00:00</label>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Sound Panel -->
+    <div class="panel" id="panel-sound">
+      <div class="panel-header"><h3>🎙️ Sound Meter</h3></div>
+      <div class="panel-body">
+
+        <div>
+          <div class="section-label" style="margin-bottom:8px;">Display Style</div>
+          <div class="style-grid">
+            <div class="style-card">
+              <input type="radio" name="soundstyle" id="ss-bar" value="bar" checked>
+              <label for="ss-bar">
+                <span class="style-icon">📊</span>
+                VU Bar
+              </label>
+            </div>
+            <div class="style-card">
+              <input type="radio" name="soundstyle" id="ss-wave" value="wave">
+              <label for="ss-wave">
+                <span class="style-icon">〰️</span>
+                Waveform
+              </label>
+            </div>
+            <div class="style-card">
+              <input type="radio" name="soundstyle" id="ss-light" value="light">
+              <label for="ss-light">
+                <span class="style-icon">🚦</span>
+                Traffic Light
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <label>ALERT THRESHOLD (dB)</label>
+            <span class="slider-val" id="threshold-val">65 dB</span>
+          </div>
+          <input type="range" min="40" max="90" value="65" id="threshold-slider"
+            oninput="document.getElementById('threshold-val').textContent = this.value + ' dB'">
+        </div>
+
+        <div class="toggle-row">
+          <span>Sound Alerts</span>
+          <label class="toggle">
+            <input type="checkbox" id="sound-alerts" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div id="alert-msg-wrap">
+          <div class="section-label" style="margin-bottom:6px;">Alert Message (shown on screen)</div>
+          <input class="alert-msg-input" id="alert-msg" type="text" value="🔇 Too loud!" maxlength="40" placeholder="Message shown when too noisy">
+        </div>
+
+        <button class="push-btn" onclick="pushSound()">🎙️ Push Sound Settings to Screen</button>
+        <button class="ctrl-btn stop" style="margin-top:-4px;" onclick="stopSound()">■ Stop Sound Meter</button>
+
+      </div>
+    </div>
+
+    <!-- Push button (for clock/nownext) -->
+    <button class="push-btn" id="main-push-btn" onclick="pushWidget()" style="display:none;">
+      ▶ Push to Screen
+    </button>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const SCRIPT_URL = localStorage.getItem('kiosk_script_url') || '';
+const SHARED_SECRET = 'iesv-kiosk-2025';
+const ROOMS = ['D40','D41','D42','D43','D44','D45'];
+
+let currentRoom = null;
+let currentClass = '';
+let currentWidget = 'clock';
+let pin = '';
+let cdState = { running: false, paused: false, endTs: null, remaining: 0 };
+let cdTick = null;
+let pollInterval = null;
+
+// ============================================================
+// API
+// ============================================================
+async function api(method, body = {}, params = {}) {
+  const url = SCRIPT_URL || localStorage.getItem('kiosk_script_url') || '';
+  if (!url) { showToast('No script URL — set in Admin panel', 'err'); throw new Error('No URL'); }
+  if (method === 'GET') {
+    const q = new URLSearchParams({ secret: SHARED_SECRET, ...params });
+    const res = await fetch(`${url}?${q}`);
+    return res.json();
+  } else {
+    const res = await fetch(url, {
+      method: 'POST',
+      body: JSON.stringify({ secret: SHARED_SECRET, ...body })
+    });
+    return res.json();
+  }
+}
+
+// ============================================================
+// ROOM SCREEN
+// ============================================================
+async function buildRoomGrid() {
+  const grid = document.getElementById('room-grid');
+  grid.innerHTML = '';
+  let config = {};
+  try { config = await api('GET', {}, { action: 'getConfig' }); } catch {}
+  ROOMS.forEach(room => {
+    const cls = config[`room_class_${room}`] || '';
+    const enabled = config[`room_enabled_${room}`] !== 'false';
+    if (!enabled) return;
+    const btn = document.createElement('button');
+    btn.className = 'room-btn';
+    btn.innerHTML = `${room}${cls ? `<span class="class-name">${cls}</span>` : ''}`;
+    btn.onclick = () => showPinScreen(room, cls);
+    grid.appendChild(btn);
+  });
+}
+
+function showRoomScreen() {
+  clearInterval(pollInterval);
+  clearInterval(cdTick);
+  pin = '';
+  document.getElementById('room-screen').style.display = 'flex';
+  document.getElementById('pin-screen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'none';
+  buildRoomGrid();
+}
+
+// ============================================================
+// PIN
+// ============================================================
+function showPinScreen(room, cls) {
+  currentRoom = room;
+  currentClass = cls;
+  pin = '';
+  updatePinDots();
+  document.getElementById('pin-room-label').textContent = room + (cls ? ` — ${cls}` : '');
+  document.getElementById('room-screen').style.display = 'none';
+  document.getElementById('pin-screen').style.display = 'flex';
+}
+
+function pinKey(k) {
+  if (pin.length >= 4) return;
+  pin += k;
+  updatePinDots();
+  if (pin.length === 4) setTimeout(pinEnter, 100);
+}
+
+function pinClear() { pin = pin.slice(0,-1); updatePinDots(); }
+
+function updatePinDots(error = false) {
+  document.querySelectorAll('#pin-screen .pin-dot').forEach((d, i) => {
+    d.classList.toggle('filled', i < pin.length);
+    d.classList.toggle('error', error);
+  });
+}
+
+async function pinEnter() {
+  try {
+    const res = await api('POST', { action: 'verifyRoomPin', room: currentRoom, pin });
+    if (res.ok) {
+      showDashboard();
+    } else {
+      pin = '';
+      updatePinDots(true);
+      setTimeout(() => updatePinDots(false), 600);
+    }
+  } catch {
+    // Offline fallback — allow entry if no script
+    showDashboard();
+  }
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function showDashboard() {
+  document.getElementById('pin-screen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'flex';
+  document.getElementById('dash-room-id').textContent = currentRoom;
+  document.getElementById('dash-class').textContent = currentClass || '—';
+  loadRoomState();
+  pollInterval = setInterval(loadRoomState, 10000);
+}
+
+async function loadRoomState() {
+  try {
+    const state = await api('GET', {}, { action: 'getState', room: currentRoom });
+    setStatus(true, state.updated);
+    // Sync widget
+    currentWidget = state.widget || 'clock';
+    highlightWidget(currentWidget);
+    // Sync countdown if running
+    if (state.widget === 'countdown' && state.countdown) {
+      const cd = state.countdown;
+      if (!cdState.running && cd.end) {
+        cdState.endTs = parseInt(cd.end);
+        cdState.paused = cd.paused;
+        cdState.remaining = parseInt(cd.remaining) || 0;
+        if (!cd.paused) startLocalTick();
+        else renderCdDisplay(cdState.remaining);
+      }
+    }
+    // Sync sound
+    if (state.widget === 'sound' && state.sound) {
+      document.getElementById('threshold-slider').value = state.sound.threshold || 65;
+      document.getElementById('threshold-val').textContent = (state.sound.threshold || 65) + ' dB';
+      document.getElementById('sound-alerts').checked = state.sound.alerts;
+      document.getElementById('alert-msg').value = state.sound.alertMsg || '';
+      const styleInput = document.querySelector(`input[name="soundstyle"][value="${state.sound.style}"]`);
+      if (styleInput) styleInput.checked = true;
+    }
+  } catch {
+    setStatus(false);
+  }
+}
+
+function setStatus(ok, updated = '') {
+  document.getElementById('status-dot').className = 'status-dot' + (ok ? '' : ' err');
+  document.getElementById('status-text').textContent = ok ? 'Connected' : 'Offline';
+  if (updated) {
+    const d = new Date(updated);
+    document.getElementById('status-updated').textContent = 'Last sync: ' + d.toLocaleTimeString();
+  }
+}
+
+// ============================================================
+// WIDGET SELECTION
+// ============================================================
+function selectWidget(w) {
+  currentWidget = w;
+  highlightWidget(w);
+  document.getElementById('panel-countdown').classList.toggle('visible', w === 'countdown');
+  document.getElementById('panel-sound').classList.toggle('visible', w === 'sound');
+  document.getElementById('main-push-btn').style.display = (w === 'clock' || w === 'nownext') ? 'block' : 'none';
+  if (w === 'clock' || w === 'nownext') {
+    clearInterval(cdTick);
+  }
+}
+
+function highlightWidget(w) {
+  ['clock','nownext','countdown','sound'].forEach(name => {
+    document.getElementById(`wbtn-${name}`).classList.toggle('active', name === w);
+  });
+}
+
+async function pushWidget() {
+  try {
+    await api('POST', { action: 'setWidget', room: currentRoom, widget: currentWidget });
+    showToast(`${currentWidget} pushed to ${currentRoom}`, 'ok');
+  } catch (e) {
+    showToast('Push failed', 'err');
+  }
+}
+
+// ============================================================
+// COUNTDOWN
+// ============================================================
+function setQuickTime(mins) {
+  document.getElementById('cd-mins').value = mins;
+  document.getElementById('cd-secs').value = 0;
+}
+
+function getTotalSeconds() {
+  const m = parseInt(document.getElementById('cd-mins').value) || 0;
+  const s = parseInt(document.getElementById('cd-secs').value) || 0;
+  return m * 60 + s;
+}
+
+function getEndAction() {
+  return document.querySelector('input[name="endaction"]:checked')?.value || 'clock';
+}
+
+async function cdStart() {
+  const total = getTotalSeconds();
+  if (total <= 0) { showToast('Set a time first', 'err'); return; }
+  const endTs = Date.now() + total * 1000;
+  cdState = { running: true, paused: false, endTs, remaining: total };
+  startLocalTick();
+  document.getElementById('cd-start-btn').disabled = true;
+  document.getElementById('cd-pause-btn').disabled = false;
+  try {
+    await api('POST', {
+      action: 'setCountdown',
+      room: currentRoom,
+      data: { end: endTs, paused: false, remaining: '', endAction: getEndAction() }
+    });
+    showToast('Countdown started', 'ok');
+  } catch { showToast('Push failed', 'err'); }
+}
+
+async function cdPause() {
+  if (!cdState.running) return;
+  if (!cdState.paused) {
+    // Pause
+    clearInterval(cdTick);
+    cdState.paused = true;
+    cdState.remaining = Math.max(0, Math.round((cdState.endTs - Date.now()) / 1000));
+    document.getElementById('cd-pause-btn').textContent = '▶ Resume';
+    document.getElementById('cd-status').textContent = 'PAUSED';
+    try {
+      await api('POST', {
+        action: 'setCountdown',
+        room: currentRoom,
+        data: { end: '', paused: true, remaining: cdState.remaining, endAction: getEndAction() }
+      });
+    } catch {}
+  } else {
+    // Resume
+    cdState.endTs = Date.now() + cdState.remaining * 1000;
+    cdState.paused = false;
+    startLocalTick();
+    document.getElementById('cd-pause-btn').textContent = '⏸ Pause';
+    try {
+      await api('POST', {
+        action: 'setCountdown',
+        room: currentRoom,
+        data: { end: cdState.endTs, paused: false, remaining: '', endAction: getEndAction() }
+      });
+    } catch {}
+  }
+}
+
+async function cdReset() {
+  clearInterval(cdTick);
+  cdState = { running: false, paused: false, endTs: null, remaining: 0 };
+  document.getElementById('cd-start-btn').disabled = false;
+  document.getElementById('cd-pause-btn').disabled = true;
+  document.getElementById('cd-pause-btn').textContent = '⏸ Pause';
+  renderCdDisplay(getTotalSeconds());
+  document.getElementById('cd-status').textContent = 'NOT STARTED';
+  document.getElementById('cd-display').className = 'countdown-time';
+}
+
+async function cdStop() {
+  clearInterval(cdTick);
+  cdState = { running: false, paused: false, endTs: null, remaining: 0 };
+  document.getElementById('cd-start-btn').disabled = false;
+  document.getElementById('cd-pause-btn').disabled = true;
+  document.getElementById('cd-pause-btn').textContent = '⏸ Pause';
+  renderCdDisplay(0);
+  // Switch screen back to clock
+  try {
+    await api('POST', { action: 'setWidget', room: currentRoom, widget: 'clock' });
+    showToast('Countdown stopped — screen back to clock', 'ok');
+    selectWidget('clock');
+    highlightWidget('clock');
+  } catch { showToast('Stop failed', 'err'); }
+}
+
+function startLocalTick() {
+  clearInterval(cdTick);
+  cdTick = setInterval(() => {
+    const rem = Math.max(0, Math.round((cdState.endTs - Date.now()) / 1000));
+    renderCdDisplay(rem);
+    if (rem <= 0) {
+      clearInterval(cdTick);
+      cdState.running = false;
+      document.getElementById('cd-status').textContent = 'DONE';
+      document.getElementById('cd-display').className = 'countdown-time done';
+      document.getElementById('cd-start-btn').disabled = false;
+      document.getElementById('cd-pause-btn').disabled = true;
+    }
+  }, 250);
+}
+
+function renderCdDisplay(secs) {
+  const m = Math.floor(secs / 60).toString().padStart(2, '0');
+  const s = (secs % 60).toString().padStart(2, '0');
+  document.getElementById('cd-display').textContent = `${m}:${s}`;
+  const el = document.getElementById('cd-display');
+  const statusEl = document.getElementById('cd-status');
+  if (cdState.paused) {
+    el.className = 'countdown-time paused';
+    statusEl.textContent = 'PAUSED';
+  } else if (cdState.running && secs > 0) {
+    el.className = 'countdown-time running';
+    statusEl.textContent = 'RUNNING';
+  }
+}
+
+// ============================================================
+// SOUND
+// ============================================================
+async function pushSound() {
+  const style = document.querySelector('input[name="soundstyle"]:checked')?.value || 'bar';
+  const threshold = parseInt(document.getElementById('threshold-slider').value);
+  const alerts = document.getElementById('sound-alerts').checked;
+  const alertMsg = document.getElementById('alert-msg').value;
+  try {
+    await api('POST', {
+      action: 'setSoundOptions',
+      room: currentRoom,
+      data: { style, threshold, alerts, alertMsg }
+    });
+    showToast('Sound meter pushed to screen', 'ok');
+  } catch { showToast('Push failed', 'err'); }
+}
+
+async function stopSound() {
+  try {
+    await api('POST', { action: 'setWidget', room: currentRoom, widget: 'clock' });
+    showToast('Sound meter stopped', 'ok');
+    selectWidget('clock');
+  } catch { showToast('Stop failed', 'err'); }
+}
+
+// Hide alert msg when alerts off
+document.getElementById('sound-alerts').addEventListener('change', function() {
+  document.getElementById('alert-msg-wrap').style.display = this.checked ? 'block' : 'none';
+});
+
+// ============================================================
+// TOAST
+// ============================================================
+let toastTimer;
+function showToast(msg, type = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('keydown', e => {
+  if (document.getElementById('pin-screen').style.display === 'none') return;
+  if (e.key >= '0' && e.key <= '9') pinKey(e.key);
+  if (e.key === 'Backspace') pinClear();
+  if (e.key === 'Enter') pinEnter();
+});
+
+showRoomScreen();
+</script>
+</body>
+</html>
