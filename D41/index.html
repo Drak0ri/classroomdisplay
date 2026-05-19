@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IESV Kiosk Display</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #12325A;
+    --blue: #0e70f4;
+    --red: #e4223d;
+    --cream: #F6F4EF;
+    --green: #1a9e5c;
+    --amber: #f59e0b;
+    --ink: #0a1a2e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--navy);
+    font-family: 'Nunito', sans-serif;
+    color: var(--cream);
+  }
+
+  /* ============================================================
+     SHARED LAYOUT
+  ============================================================ */
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .screen.active { display: flex; }
+
+  .room-chip {
+    position: fixed;
+    top: 16px;
+    right: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.25);
+    letter-spacing: 2px;
+    z-index: 100;
+  }
+
+  /* ============================================================
+     CLOCK WIDGET
+  ============================================================ */
+  #screen-clock {
+    background: var(--navy);
+  }
+
+  .clock-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(5rem, 20vw, 14rem);
+    font-weight: 700;
+    color: var(--cream);
+    line-height: 1;
+    letter-spacing: -4px;
+  }
+
+  .clock-date {
+    font-family: 'Nunito', sans-serif;
+    font-size: clamp(1rem, 3vw, 2rem);
+    font-weight: 600;
+    color: rgba(246,244,239,0.45);
+    margin-top: 1rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .clock-class {
+    position: fixed;
+    bottom: 24px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    color: rgba(246,244,239,0.2);
+    letter-spacing: 3px;
+  }
+
+  /* ============================================================
+     NOW & NEXT WIDGET
+  ============================================================ */
+  #screen-nownext {
+    background: var(--cream);
+    color: var(--ink);
+    padding: 3vw;
+    gap: 2vw;
+    justify-content: flex-start;
+  }
+
+  .nn-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 1.5vw;
+    border-bottom: 2px solid rgba(0,0,0,0.1);
+  }
+
+  .nn-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(0.8rem, 2vw, 1.2rem);
+    font-weight: 700;
+    color: rgba(0,0,0,0.35);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .nn-clock {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(1.2rem, 3vw, 2rem);
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  .nn-body {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2vw;
+    flex: 1;
+  }
+
+  .nn-card {
+    background: white;
+    border: 2px solid var(--ink);
+    border-radius: 8px;
+    box-shadow: 4px 4px 0 var(--ink);
+    padding: 2.5vw;
+    display: flex;
+    flex-direction: column;
+    gap: 1vw;
+    overflow: hidden;
+  }
+
+  .nn-card.now { border-left: 6px solid var(--blue); }
+  .nn-card.next { border-left: 6px solid rgba(0,0,0,0.15); }
+
+  .nn-card-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(0.6rem, 1.5vw, 0.9rem);
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(0,0,0,0.3);
+  }
+
+  .nn-card.now .nn-card-label { color: var(--blue); }
+
+  .nn-subject {
+    font-size: clamp(1.5rem, 5vw, 3.5rem);
+    font-weight: 900;
+    color: var(--navy);
+    line-height: 1.1;
+  }
+
+  .nn-teacher {
+    font-size: clamp(0.8rem, 2vw, 1.3rem);
+    font-weight: 600;
+    color: rgba(0,0,0,0.5);
+  }
+
+  .nn-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(0.8rem, 1.8vw, 1.1rem);
+    font-weight: 700;
+    color: rgba(0,0,0,0.35);
+    margin-top: auto;
+  }
+
+  .nn-progress-bar {
+    height: 6px;
+    background: rgba(0,0,0,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: auto;
+  }
+
+  .nn-progress-fill {
+    height: 100%;
+    background: var(--blue);
+    border-radius: 3px;
+    transition: width 30s linear;
+  }
+
+  .nn-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(0,0,0,0.25);
+    font-size: clamp(1rem, 2.5vw, 1.5rem);
+    font-weight: 600;
+    font-style: italic;
+  }
+
+  /* ============================================================
+     COUNTDOWN WIDGET
+  ============================================================ */
+  #screen-countdown {
+    background: var(--navy);
+  }
+
+  #screen-countdown.flash-red {
+    animation: flashRed 0.6s ease infinite alternate;
+  }
+
+  @keyframes flashRed {
+    from { background: var(--navy); }
+    to { background: var(--red); }
+  }
+
+  .cd-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(0.7rem, 2vw, 1rem);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(246,244,239,0.35);
+    margin-bottom: 1rem;
+  }
+
+  .cd-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(5rem, 22vw, 16rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -4px;
+    transition: color 0.3s;
+  }
+
+  .cd-time.green { color: var(--green); }
+  .cd-time.amber { color: var(--amber); }
+  .cd-time.red   { color: var(--red); }
+  .cd-time.white { color: var(--cream); }
+
+  .cd-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+    letter-spacing: 3px;
+    color: rgba(246,244,239,0.3);
+    margin-top: 1.5rem;
+    text-transform: uppercase;
+  }
+
+  .cd-bar-wrap {
+    width: 60%;
+    max-width: 600px;
+    height: 8px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    margin-top: 2rem;
+    overflow: hidden;
+  }
+
+  .cd-bar-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 4px;
+    transition: width 0.5s linear, background 0.5s;
+  }
+
+  /* ============================================================
+     SOUND METER WIDGET
+  ============================================================ */
+  #screen-sound {
+    background: var(--navy);
+    padding: 4vw;
+    gap: 2vw;
+  }
+
+  .sound-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(0.7rem, 1.5vw, 1rem);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(246,244,239,0.35);
+  }
+
+  /* VU BAR */
+  #sound-bar-wrap {
+    width: 80%;
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5vw;
+    align-items: center;
+  }
+
+  .vu-meter {
+    width: 100%;
+    height: clamp(60px, 12vw, 100px);
+    background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .vu-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    border-radius: 4px;
+    transition: width 0.08s ease-out, background 0.2s;
+  }
+
+  .vu-threshold-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: rgba(255,255,255,0.4);
+    border-radius: 2px;
+  }
+
+  .vu-db-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(2rem, 8vw, 5rem);
+    font-weight: 700;
+    color: var(--cream);
+  }
+
+  /* WAVEFORM */
+  #sound-wave-wrap { width: 80%; max-width: 700px; }
+
+  #waveform-canvas {
+    width: 100%;
+    height: clamp(100px, 20vw, 180px);
+    border-radius: 6px;
+  }
+
+  /* TRAFFIC LIGHT */
+  #sound-light-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2vw;
+  }
+
+  .traffic-light-housing {
+    background: rgba(0,0,0,0.4);
+    border: 3px solid rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 2vw;
+    display: flex;
+    flex-direction: column;
+    gap: 2vw;
+    align-items: center;
+  }
+
+  .tl-bulb {
+    width: clamp(80px, 15vw, 140px);
+    height: clamp(80px, 15vw, 140px);
+    border-radius: 50%;
+    border: 3px solid rgba(0,0,0,0.4);
+    transition: all 0.2s;
+    filter: brightness(0.2);
+  }
+
+  .tl-bulb.red-bulb { background: var(--red); }
+  .tl-bulb.amber-bulb { background: var(--amber); }
+  .tl-bulb.green-bulb { background: var(--green); }
+  .tl-bulb.lit { filter: brightness(1); box-shadow: 0 0 30px currentColor; }
+
+  .tl-status-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(1rem, 3vw, 2rem);
+    font-weight: 700;
+    letter-spacing: 3px;
+  }
+
+  /* Alert overlay */
+  #alert-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(228, 34, 61, 0.92);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 2rem;
+    z-index: 500;
+    animation: alertPulse 0.8s ease infinite alternate;
+  }
+
+  @keyframes alertPulse {
+    from { opacity: 0.85; }
+    to { opacity: 1; }
+  }
+
+  #alert-overlay.show { display: flex; }
+
+  .alert-icon { font-size: clamp(3rem, 10vw, 7rem); }
+
+  .alert-msg {
+    font-size: clamp(2rem, 6vw, 4rem);
+    font-weight: 900;
+    text-align: center;
+    padding: 0 2rem;
+  }
+
+  /* ============================================================
+     LOADING / ERROR
+  ============================================================ */
+  #screen-loading {
+    background: var(--navy);
+    gap: 1rem;
+  }
+
+  .loading-dot-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .loading-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    animation: loadBounce 1s ease infinite;
+  }
+
+  .loading-dot:nth-child(2) { animation-delay: 0.15s; }
+  .loading-dot:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes loadBounce {
+    0%,100% { transform: translateY(0); opacity: 0.3; }
+    50% { transform: translateY(-10px); opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="room-chip" id="room-chip">D41</div>
+
+<!-- ============================================================ -->
+<!-- LOADING -->
+<!-- ============================================================ -->
+<div class="screen active" id="screen-loading">
+  <div class="loading-dot-row">
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- CLOCK -->
+<!-- ============================================================ -->
+<div class="screen" id="screen-clock">
+  <div class="clock-time" id="clock-time">00:00</div>
+  <div class="clock-date" id="clock-date"></div>
+  <div class="clock-class" id="clock-class"></div>
+</div>
+
+<!-- ============================================================ -->
+<!-- NOW & NEXT -->
+<!-- ============================================================ -->
+<div class="screen" id="screen-nownext">
+  <div class="nn-header">
+    <span class="nn-title" id="nn-class-title">Class</span>
+    <span class="nn-clock" id="nn-clock">00:00</span>
+  </div>
+  <div class="nn-body">
+    <div class="nn-card now" id="nn-now">
+      <div class="nn-card-label">Now</div>
+      <div class="nn-subject" id="nn-now-subject">—</div>
+      <div class="nn-teacher" id="nn-now-teacher"></div>
+      <div class="nn-time" id="nn-now-time"></div>
+      <div class="nn-progress-bar"><div class="nn-progress-fill" id="nn-progress" style="width:0%"></div></div>
+    </div>
+    <div class="nn-card next" id="nn-next">
+      <div class="nn-card-label">Next</div>
+      <div class="nn-subject" id="nn-next-subject">—</div>
+      <div class="nn-teacher" id="nn-next-teacher"></div>
+      <div class="nn-time" id="nn-next-time"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- COUNTDOWN -->
+<!-- ============================================================ -->
+<div class="screen" id="screen-countdown">
+  <div class="cd-label">Countdown</div>
+  <div class="cd-time white" id="cd-time">00:00</div>
+  <div class="cd-status" id="cd-status-wall">—</div>
+  <div class="cd-bar-wrap">
+    <div class="cd-bar-fill" id="cd-bar" style="width:100%"></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SOUND METER -->
+<!-- ============================================================ -->
+<div class="screen" id="screen-sound">
+  <div class="sound-label" id="sound-label">Sound Level</div>
+
+  <!-- VU Bar -->
+  <div id="sound-bar-wrap" style="display:none;">
+    <div class="vu-meter">
+      <div class="vu-fill" id="vu-fill"></div>
+      <div class="vu-threshold-line" id="vu-threshold-line" style="left:65%"></div>
+    </div>
+    <div class="vu-db-label" id="vu-db">— dB</div>
+  </div>
+
+  <!-- Waveform -->
+  <div id="sound-wave-wrap" style="display:none;">
+    <canvas id="waveform-canvas" width="700" height="180"></canvas>
+  </div>
+
+  <!-- Traffic Light -->
+  <div id="sound-light-wrap" style="display:none;">
+    <div class="traffic-light-housing">
+      <div class="tl-bulb red-bulb" id="tl-red"></div>
+      <div class="tl-bulb amber-bulb" id="tl-amber"></div>
+      <div class="tl-bulb green-bulb" id="tl-green"></div>
+    </div>
+    <div class="tl-status-text" id="tl-text">LISTENING...</div>
+  </div>
+</div>
+
+<!-- Alert overlay -->
+<div id="alert-overlay">
+  <div class="alert-icon">🔇</div>
+  <div class="alert-msg" id="alert-msg-text">Too loud!</div>
+</div>
+
+<script>
+// ============================================================
+// ROOM CONFIG — change ROOM_ID for each wall screen copy
+// ============================================================
+const ROOM_ID = 'D41';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz2cGR5V-PUwzWKB-eYgtSmeJf8VV8Jt8oLDB8KFgRdkE8O2yTbKqOj378Dwd0PfmcUnQ/exec';
+const SHARED_SECRET = 'iesv-kiosk-2025';
+const POLL_MS = 5000;
+
+// ============================================================
+// STATE
+// ============================================================
+let currentWidget = 'loading';
+let schedule = [];
+let soundConfig = { style: 'bar', threshold: 65, alerts: true, alertMsg: 'Too loud!' };
+let micStream = null;
+let analyser = null;
+let audioCtx = null;
+let soundAnimFrame = null;
+let cdTotal = 0;
+let cdEndTs = null;
+let cdTick = null;
+let cdPaused = false;
+let cdRemaining = 0;
+let alertShown = false;
+let alertTimer = null;
+let lastUpdated = '';
+
+document.getElementById('room-chip').textContent = ROOM_ID;
+
+// ============================================================
+// API
+// ============================================================
+async function apiFetch(params) {
+  const q = new URLSearchParams({ secret: SHARED_SECRET, ...params });
+  const res = await fetch(`${SCRIPT_URL}?${q}`);
+  return res.json();
+}
+
+// ============================================================
+// POLLING
+// ============================================================
+async function poll() {
+  try {
+    const state = await apiFetch({ action: 'getState', room: ROOM_ID });
+    if (state.updated === lastUpdated && currentWidget !== 'loading') return;
+    lastUpdated = state.updated;
+    applyState(state);
+  } catch (e) {
+    console.warn('Poll failed', e);
+  }
+}
+
+async function applyState(state) {
+  const widget = state.widget || 'clock';
+
+  // Load schedule if switching to nownext
+  if (widget === 'nownext' && schedule.length === 0) {
+    await loadSchedule();
+  }
+
+  // Load sound config
+  if (widget === 'sound') {
+    soundConfig = {
+      style: state.sound?.style || 'bar',
+      threshold: parseInt(state.sound?.threshold) || 65,
+      alerts: state.sound?.alerts !== false,
+      alertMsg: state.sound?.alertMsg || 'Too loud!'
+    };
+  }
+
+  // Handle countdown
+  if (widget === 'countdown') {
+    const cd = state.countdown;
+    cdPaused = cd.paused;
+    if (!cd.paused && cd.end) {
+      cdEndTs = parseInt(cd.end);
+      cdTotal = cdTotal || Math.round((cdEndTs - Date.now()) / 1000);
+    } else if (cd.paused && cd.remaining) {
+      cdRemaining = parseInt(cd.remaining);
+      cdEndTs = null;
+    }
+    cdEndAction = cd.endAction || 'clock';
+  }
+
+  switchWidget(widget, state);
+}
+
+// ============================================================
+// WIDGET SWITCHER
+// ============================================================
+function switchWidget(widget, state) {
+  // Stop previous
+  if (currentWidget === 'sound' && widget !== 'sound') stopMic();
+  if (currentWidget === 'countdown' && widget !== 'countdown') clearInterval(cdTick);
+
+  currentWidget = widget;
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+
+  switch (widget) {
+    case 'clock':    startClock(); break;
+    case 'nownext':  startNowNext(state); break;
+    case 'countdown': startCountdown(state); break;
+    case 'sound':    startSound(); break;
+    default:         startClock(); break;
+  }
+}
+
+// ============================================================
+// CLOCK
+// ============================================================
+function startClock() {
+  document.getElementById('screen-clock').classList.add('active');
+  tickClock();
+  setInterval(tickClock, 1000);
+}
+
+function tickClock() {
+  const now = new Date();
+  const h = now.getHours().toString().padStart(2,'0');
+  const m = now.getMinutes().toString().padStart(2,'0');
+  document.getElementById('clock-time').textContent = `${h}:${m}`;
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('clock-date').textContent =
+    `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+// ============================================================
+// NOW & NEXT
+// ============================================================
+async function loadSchedule() {
+  try {
+    const res = await apiFetch({ action: 'getSchedule', room: ROOM_ID });
+    schedule = res.schedule || [];
+  } catch { schedule = []; }
+}
+
+function startNowNext(state) {
+  document.getElementById('screen-nownext').classList.add('active');
+  updateNowNext();
+  setInterval(updateNowNext, 30000);
+  // Clock in corner
+  setInterval(() => {
+    const now = new Date();
+    document.getElementById('nn-clock').textContent =
+      now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  }, 1000);
+}
+
+function parseTime(str) {
+  if (!str) return null;
+  const [h, m] = str.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+function updateNowNext() {
+  const now = new Date();
+  document.getElementById('nn-clock').textContent =
+    now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+
+  let nowLesson = null, nextLesson = null;
+
+  for (let i = 0; i < schedule.length; i++) {
+    const start = parseTime(schedule[i].start);
+    const end = parseTime(schedule[i].end);
+    if (!start || !end) continue;
+    if (now >= start && now < end) {
+      nowLesson = schedule[i];
+      nextLesson = schedule[i + 1] || null;
+      // Progress bar
+      const elapsed = now - start;
+      const total = end - start;
+      const pct = Math.min(100, Math.round((elapsed / total) * 100));
+      document.getElementById('nn-progress').style.width = pct + '%';
+      break;
+    }
+    if (now < start && !nextLesson && !nowLesson) {
+      nextLesson = schedule[i];
+    }
+  }
+
+  if (nowLesson) {
+    document.getElementById('nn-now-subject').textContent = nowLesson.subject || '—';
+    document.getElementById('nn-now-teacher').textContent = nowLesson.teacher || '';
+    document.getElementById('nn-now-time').textContent = `${nowLesson.start} – ${nowLesson.end}`;
+    document.getElementById('nn-now').classList.remove('nn-empty');
+  } else {
+    document.getElementById('nn-now-subject').textContent = 'Free';
+    document.getElementById('nn-now-teacher').textContent = '';
+    document.getElementById('nn-now-time').textContent = '';
+    document.getElementById('nn-progress').style.width = '0%';
+  }
+
+  if (nextLesson) {
+    document.getElementById('nn-next-subject').textContent = nextLesson.subject || '—';
+    document.getElementById('nn-next-teacher').textContent = nextLesson.teacher || '';
+    document.getElementById('nn-next-time').textContent = `${nextLesson.start} – ${nextLesson.end}`;
+  } else {
+    document.getElementById('nn-next-subject').textContent = 'Nothing scheduled';
+    document.getElementById('nn-next-teacher').textContent = '';
+    document.getElementById('nn-next-time').textContent = '';
+  }
+}
+
+// ============================================================
+// COUNTDOWN
+// ============================================================
+let cdEndAction = 'clock';
+
+function startCountdown(state) {
+  document.getElementById('screen-countdown').classList.add('active');
+  document.getElementById('screen-countdown').classList.remove('flash-red');
+  clearInterval(cdTick);
+
+  if (cdPaused) {
+    renderCd(cdRemaining);
+    document.getElementById('cd-status-wall').textContent = 'PAUSED';
+    return;
+  }
+
+  if (!cdEndTs) return;
+
+  // Calculate total from first reading
+  const initRem = Math.max(0, Math.round((cdEndTs - Date.now()) / 1000));
+  if (!cdTotal || cdTotal < initRem) cdTotal = initRem;
+
+  cdTick = setInterval(() => {
+    const rem = Math.max(0, Math.round((cdEndTs - Date.now()) / 1000));
+    renderCd(rem);
+    if (rem <= 0) {
+      clearInterval(cdTick);
+      onCountdownDone();
+    }
+  }, 250);
+}
+
+function renderCd(secs) {
+  const m = Math.floor(secs / 60).toString().padStart(2,'0');
+  const s = (secs % 60).toString().padStart(2,'0');
+  document.getElementById('cd-time').textContent = `${m}:${s}`;
+
+  const pct = cdTotal > 0 ? (secs / cdTotal) * 100 : 0;
+  document.getElementById('cd-bar').style.width = pct + '%';
+
+  const el = document.getElementById('cd-time');
+  const bar = document.getElementById('cd-bar');
+
+  if (secs > cdTotal * 0.5) {
+    el.className = 'cd-time green';
+    bar.style.background = 'var(--green)';
+  } else if (secs > cdTotal * 0.2) {
+    el.className = 'cd-time amber';
+    bar.style.background = 'var(--amber)';
+  } else {
+    el.className = 'cd-time red';
+    bar.style.background = 'var(--red)';
+  }
+
+  document.getElementById('cd-status-wall').textContent = cdPaused ? 'PAUSED' : 'RUNNING';
+}
+
+function onCountdownDone() {
+  document.getElementById('cd-time').textContent = '00:00';
+  document.getElementById('cd-status-wall').textContent = 'DONE';
+  document.getElementById('cd-time').className = 'cd-time red';
+  document.getElementById('cd-bar').style.width = '0%';
+
+  switch (cdEndAction) {
+    case 'clock':
+      setTimeout(() => { currentWidget = 'clock'; switchWidget('clock', {}); }, 2000);
+      break;
+    case 'nownext':
+      setTimeout(() => { currentWidget = 'nownext'; switchWidget('nownext', {}); }, 2000);
+      break;
+    case 'flash':
+      document.getElementById('screen-countdown').classList.add('flash-red');
+      break;
+    case 'stay':
+    default:
+      break;
+  }
+}
+
+// ============================================================
+// SOUND METER
+// ============================================================
+function startSound() {
+  document.getElementById('screen-sound').classList.add('active');
+  setSoundStyle(soundConfig.style);
+  requestMic();
+}
+
+function setSoundStyle(style) {
+  document.getElementById('sound-bar-wrap').style.display = style === 'bar' ? 'flex' : 'none';
+  document.getElementById('sound-wave-wrap').style.display = style === 'wave' ? 'block' : 'none';
+  document.getElementById('sound-light-wrap').style.display = style === 'light' ? 'flex' : 'none';
+
+  // Set threshold line position for VU
+  if (style === 'bar') {
+    const pct = ((soundConfig.threshold - 30) / 70) * 100;
+    document.getElementById('vu-threshold-line').style.left = pct + '%';
+  }
+}
+
+async function requestMic() {
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.6;
+    const source = audioCtx.createMediaStreamSource(micStream);
+    source.connect(analyser);
+    soundLoop();
+  } catch (e) {
+    document.getElementById('sound-label').textContent = 'Mic access denied — check browser permissions';
+  }
+}
+
+function stopMic() {
+  cancelAnimationFrame(soundAnimFrame);
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
+  if (audioCtx) audioCtx.close();
+  micStream = null; analyser = null; audioCtx = null;
+  hideAlert();
+}
+
+function getDb() {
+  if (!analyser) return 0;
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(data);
+  const avg = data.reduce((a, b) => a + b, 0) / data.length;
+  // Map 0-255 avg to roughly 30-100 dB
+  return Math.round(30 + (avg / 255) * 70);
+}
+
+function soundLoop() {
+  soundAnimFrame = requestAnimationFrame(soundLoop);
+  const db = getDb();
+  const style = soundConfig.style;
+  const threshold = soundConfig.threshold;
+
+  if (style === 'bar') renderVU(db, threshold);
+  else if (style === 'wave') renderWave();
+  else if (style === 'light') renderLight(db, threshold);
+
+  // Alert
+  if (soundConfig.alerts && db >= threshold) {
+    showAlert(soundConfig.alertMsg);
+  } else if (db < threshold - 5) {
+    hideAlert();
+  }
+}
+
+function renderVU(db, threshold) {
+  const pct = Math.min(100, Math.max(0, ((db - 30) / 70) * 100));
+  const fill = document.getElementById('vu-fill');
+  fill.style.width = pct + '%';
+  fill.style.background = db >= threshold ? 'var(--red)' : db >= threshold - 10 ? 'var(--amber)' : 'var(--green)';
+  document.getElementById('vu-db').textContent = db + ' dB';
+  document.getElementById('vu-db').style.color = db >= threshold ? 'var(--red)' : 'var(--cream)';
+}
+
+function renderWave() {
+  const canvas = document.getElementById('waveform-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteTimeDomainData(data);
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(14,112,244,0.9)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+
+  const sliceWidth = W / data.length;
+  let x = 0;
+  for (let i = 0; i < data.length; i++) {
+    const v = data[i] / 128.0;
+    const y = (v * H) / 2;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    x += sliceWidth;
+  }
+  ctx.lineTo(W, H / 2);
+  ctx.stroke();
+}
+
+function renderLight(db, threshold) {
+  const green = document.getElementById('tl-green');
+  const amber = document.getElementById('tl-amber');
+  const red = document.getElementById('tl-red');
+  const txt = document.getElementById('tl-text');
+
+  green.classList.remove('lit');
+  amber.classList.remove('lit');
+  red.classList.remove('lit');
+
+  if (db < threshold - 10) {
+    green.classList.add('lit');
+    txt.textContent = 'QUIET';
+    txt.style.color = 'var(--green)';
+  } else if (db < threshold) {
+    amber.classList.add('lit');
+    txt.textContent = 'GETTING LOUD';
+    txt.style.color = 'var(--amber)';
+  } else {
+    red.classList.add('lit');
+    txt.textContent = 'TOO LOUD!';
+    txt.style.color = 'var(--red)';
+  }
+}
+
+function showAlert(msg) {
+  if (alertShown) return;
+  alertShown = true;
+  document.getElementById('alert-msg-text').textContent = msg;
+  document.getElementById('alert-overlay').classList.add('show');
+  clearTimeout(alertTimer);
+  alertTimer = setTimeout(hideAlert, 4000);
+}
+
+function hideAlert() {
+  alertShown = false;
+  document.getElementById('alert-overlay').classList.remove('show');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+// Tick clock in background always
+setInterval(() => {
+  if (currentWidget === 'clock') tickClock();
+  if (currentWidget === 'nownext') {
+    const now = new Date();
+    document.getElementById('nn-clock').textContent =
+      now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  }
+}, 1000);
+
+// Initial poll then repeat
+poll();
+setInterval(poll, POLL_MS);
+</script>
+</body>
+</html>
