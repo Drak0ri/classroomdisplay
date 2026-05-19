@@ -685,7 +685,6 @@ function startNowNext(state) {
   document.getElementById('screen-nownext').classList.add('active');
   updateNowNext();
   setInterval(updateNowNext, 30000);
-  // Clock in corner
   setInterval(() => {
     const now = new Date();
     document.getElementById('nn-clock').textContent =
@@ -701,52 +700,129 @@ function parseTime(str) {
   return d;
 }
 
+function timeToMins(str) {
+  if (!str) return 0;
+  const [h, m] = str.split(':').map(Number);
+  return h * 60 + m;
+}
+
+// Build timeline for today:
+// 1. Filter to today's day
+// 2. Group overlapping/same-start slots (split classes)
+// 3. Sort by start time
+// 4. Insert BREAK slots between lesson groups
+function buildTimeline() {
+  const days = ['Sun','Mon','Tue','Wed','Thur','Fri','Sat'];
+  const today = days[new Date().getDay()];
+
+  // Filter to today, skip empty rows
+  const todays = schedule.filter(r => {
+    const d = (r.day || '').trim();
+    return d === today && r.start && r.end && r.subject;
+  });
+
+  if (todays.length === 0) return [];
+
+  // Group by same start+end time (split class slots)
+  const grouped = {};
+  todays.forEach(r => {
+    const key = `${r.start}|${r.end}`;
+    if (!grouped[key]) grouped[key] = { start: r.start, end: r.end, lessons: [] };
+    // Deduplicate same subject
+    const already = grouped[key].lessons.find(l => l.subject === r.subject);
+    if (!already) grouped[key].lessons.push(r);
+  });
+
+  // Sort slots by start time
+  const slots = Object.values(grouped).sort((a, b) => timeToMins(a.start) - timeToMins(b.start));
+
+  // Build timeline inserting breaks
+  const timeline = [];
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    // Check for break before this slot
+    if (i > 0) {
+      const prev = slots[i - 1];
+      const prevEndMins = timeToMins(prev.end);
+      const thisStartMins = timeToMins(slot.start);
+      if (thisStartMins > prevEndMins) {
+        timeline.push({
+          type: 'break',
+          start: prev.end,
+          end: slot.start,
+          lessons: [{ subject: 'BREAK', teacher: '' }]
+        });
+      }
+    }
+    timeline.push({ type: 'lesson', ...slot });
+  }
+
+  return timeline;
+}
+
 function updateNowNext() {
   const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+
   document.getElementById('nn-clock').textContent =
     now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
 
-  let nowLesson = null, nextLesson = null;
+  const timeline = buildTimeline();
 
-  for (let i = 0; i < schedule.length; i++) {
-    const start = parseTime(schedule[i].start);
-    const end = parseTime(schedule[i].end);
-    if (!start || !end) continue;
-    if (now >= start && now < end) {
-      nowLesson = schedule[i];
-      nextLesson = schedule[i + 1] || null;
-      // Progress bar
-      const elapsed = now - start;
-      const total = end - start;
-      const pct = Math.min(100, Math.round((elapsed / total) * 100));
-      document.getElementById('nn-progress').style.width = pct + '%';
-      break;
-    }
-    if (now < start && !nextLesson && !nowLesson) {
-      nextLesson = schedule[i];
-    }
+  let currentIdx = -1;
+  for (let i = 0; i < timeline.length; i++) {
+    const s = timeToMins(timeline[i].start);
+    const e = timeToMins(timeline[i].end);
+    if (nowMins >= s && nowMins < e) { currentIdx = i; break; }
   }
 
-  if (nowLesson) {
-    document.getElementById('nn-now-subject').textContent = nowLesson.subject || '—';
-    document.getElementById('nn-now-teacher').textContent = nowLesson.teacher || '';
-    document.getElementById('nn-now-time').textContent = `${nowLesson.start} – ${nowLesson.end}`;
-    document.getElementById('nn-now').classList.remove('nn-empty');
+  // Before school starts
+  if (currentIdx === -1 && timeline.length > 0 && nowMins < timeToMins(timeline[0].start)) {
+    currentIdx = -2; // before first slot
+  }
+
+  const current = currentIdx >= 0 ? timeline[currentIdx] : null;
+  const next = currentIdx >= 0 ? timeline[currentIdx + 1] || null
+             : currentIdx === -2 ? timeline[0] : null;
+
+  // ---- NOW card ----
+  if (current) {
+    const isBreak = current.type === 'break';
+    const subjects = current.lessons.map(l => l.subject).join(' / ');
+    const teachers = [...new Set(current.lessons.map(l => l.teacher).filter(Boolean))].join(', ');
+    document.getElementById('nn-now-subject').textContent = subjects;
+    document.getElementById('nn-now-teacher').textContent = isBreak ? '' : teachers;
+    document.getElementById('nn-now-time').textContent = `${current.start} – ${current.end}`;
+    document.getElementById('nn-now').style.borderLeftColor = isBreak ? 'var(--amber)' : 'var(--blue)';
+    document.getElementById('nn-now').querySelector('.nn-card-label').textContent = isBreak ? 'Break' : 'Now';
+
+    // Progress bar
+    const s = timeToMins(current.start), e = timeToMins(current.end);
+    const pct = Math.min(100, Math.round(((nowMins - s) / (e - s)) * 100));
+    document.getElementById('nn-progress').style.width = pct + '%';
+    document.getElementById('nn-progress').style.background = isBreak ? 'var(--amber)' : 'var(--blue)';
   } else {
-    document.getElementById('nn-now-subject').textContent = 'Free';
+    document.getElementById('nn-now-subject').textContent = nowMins > 800 ? 'School day over' : 'Not started';
     document.getElementById('nn-now-teacher').textContent = '';
     document.getElementById('nn-now-time').textContent = '';
     document.getElementById('nn-progress').style.width = '0%';
+    document.getElementById('nn-now').querySelector('.nn-card-label').textContent = 'Now';
   }
 
-  if (nextLesson) {
-    document.getElementById('nn-next-subject').textContent = nextLesson.subject || '—';
-    document.getElementById('nn-next-teacher').textContent = nextLesson.teacher || '';
-    document.getElementById('nn-next-time').textContent = `${nextLesson.start} – ${nextLesson.end}`;
+  // ---- NEXT card ----
+  if (next) {
+    const isBreak = next.type === 'break';
+    const subjects = next.lessons.map(l => l.subject).join(' / ');
+    const teachers = [...new Set(next.lessons.map(l => l.teacher).filter(Boolean))].join(', ');
+    document.getElementById('nn-next-subject').textContent = subjects;
+    document.getElementById('nn-next-teacher').textContent = isBreak ? '' : teachers;
+    document.getElementById('nn-next-time').textContent = `${next.start} – ${next.end}`;
+    document.getElementById('nn-next').querySelector('.nn-card-label').textContent = isBreak ? 'Break' : 'Next';
   } else {
-    document.getElementById('nn-next-subject').textContent = 'Nothing scheduled';
+    document.getElementById('nn-next-subject').textContent = 'Nothing more today';
     document.getElementById('nn-next-teacher').textContent = '';
     document.getElementById('nn-next-time').textContent = '';
+    document.getElementById('nn-next').querySelector('.nn-card-label').textContent = 'Next';
   }
 }
 
