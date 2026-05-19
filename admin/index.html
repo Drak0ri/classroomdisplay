@@ -984,7 +984,7 @@ function handleFileUpload(event) {
     renderScheduleTable(parsed);
     showToast(`Parsed ${parsed.length} lessons`, 'success');
   };
-  reader.readAsText(file);
+  reader.readAsText(file, 'latin1');
 }
 
 // Drag and drop
@@ -1003,24 +1003,71 @@ uploadZone.addEventListener('drop', e => {
       renderScheduleTable(parsed);
       showToast(`Parsed ${parsed.length} lessons`, 'success');
     };
-    reader.readAsText(file);
+    reader.readAsText(file, 'latin1');
   }
 });
 
 function parseLessonsFile(text) {
-  const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('#'));
-  return lines.map(line => {
-    // Try comma-separated first, then tab, then pipe
-    const sep = line.includes(',') ? ',' : line.includes('\t') ? '\t' : '|';
-    const parts = line.split(sep).map(p => p.trim());
-    return {
-      period: parts[0] || '',
-      start:  parts[1] || '',
-      end:    parts[2] || '',
-      subject: parts[3] || '',
-      teacher: parts[4] || ''
-    };
-  });
+  const lines = text.split(/\r?\n/);
+  if (lines.length < 2) return [];
+
+  const header = lines[0].split('\t').map(h => h.trim());
+  const idx = {
+    subject: header.indexOf('subject'),
+    day:     header.indexOf('day'),
+    start:   header.indexOf('starttime'),
+    length:  header.indexOf('length'),
+    teacher: header.indexOf('teacher'),
+    group:   header.indexOf('group'),
+    room:    header.indexOf('room'),
+  };
+
+  // Detect selected room from active pill
+  const roomFilter = currentScheduleRoom;
+
+  function fmtTime(t) {
+    t = t.trim().padStart(4,'0');
+    return `${t.slice(0,2)}:${t.slice(2)}`;
+  }
+
+  function calcEnd(start, len) {
+    const h = parseInt(start.slice(0,2)), m = parseInt(start.slice(2));
+    const total = h*60 + m + parseInt(len||0);
+    return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;
+  }
+
+  const seen = new Set();
+  const results = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split('\t');
+    if (cols.length < 8) continue;
+    const room    = (cols[idx.room]||'').trim();
+    const subject = (cols[idx.subject]||'').trim();
+    const day     = (cols[idx.day]||'').trim();
+    const start   = (cols[idx.start]||'').trim();
+    const len     = (cols[idx.length]||'').trim();
+    const teacher = (cols[idx.teacher]||'').trim();
+    const group   = (cols[idx.group]||'').trim();
+
+    if (room !== roomFilter) continue;
+    if (!subject || subject === 'Arbetstid') continue;
+    if (!start || !len) continue;
+
+    const startFmt = fmtTime(start);
+    const endFmt   = calcEnd(start, len);
+
+    // Deduplicate: same day+start+end+subject
+    const key = `${day}|${startFmt}|${endFmt}|${subject}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    results.push({ day, start: startFmt, end: endFmt, subject, teacher, group });
+  }
+
+  const dayOrder = {Mon:0,Tue:1,Wed:2,Thur:3,Fri:4};
+  results.sort((a,b) => (dayOrder[a.day]??9) - (dayOrder[b.day]??9) || a.start.localeCompare(b.start));
+  return results;
 }
 
 // ============================================================
