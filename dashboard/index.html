@@ -679,6 +679,83 @@
   .toast.ok { border-left: 4px solid var(--green); }
   .toast.err { border-left: 4px solid var(--red); }
 
+  /* ---- SCHEDULE ---- */
+  .schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  .schedule-table th {
+    background: var(--navy);
+    color: var(--cream);
+    padding: 7px 10px;
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .schedule-table td {
+    padding: 4px 6px;
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+    vertical-align: middle;
+  }
+
+  .schedule-table tr:nth-child(even) td { background: var(--cream); }
+
+  .schedule-table td input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink);
+    padding: 4px 2px;
+  }
+
+  .schedule-table td input:focus {
+    outline: none;
+    background: #eef5ff;
+    border-radius: 3px;
+  }
+
+  .del-row-btn {
+    background: none;
+    border: none;
+    color: var(--red);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px 4px;
+    line-height: 1;
+  }
+
+  .sched-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  .sched-btn {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.82rem;
+    padding: 7px 14px;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.1s;
+    background: var(--cream);
+  }
+
+  .sched-btn:hover { background: white; }
+  .sched-btn.primary { background: var(--blue); color: white; }
+  .sched-btn.primary:hover { background: #0a5fd4; }
+
   @media (max-width: 400px) {
     .widget-grid { grid-template-columns: 1fr 1fr; }
     .room-grid { grid-template-columns: repeat(2, 100px); }
@@ -904,6 +981,32 @@
       ▶ Push to Screen
     </button>
 
+    <!-- Schedule Panel (always visible) -->
+    <div class="panel visible" id="panel-schedule">
+      <div class="panel-header"><h3>📅 Class Schedule</h3></div>
+      <div class="panel-body">
+        <div style="overflow-x:auto;">
+          <table class="schedule-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Subject</th>
+                <th>Teacher</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="dash-schedule-tbody"></tbody>
+          </table>
+        </div>
+        <div class="sched-actions">
+          <button class="sched-btn" onclick="addDashScheduleRow()">+ Add Lesson</button>
+          <button class="sched-btn primary" onclick="saveDashSchedule()">💾 Save Schedule</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1028,6 +1131,7 @@ function showDashboard() {
   document.getElementById('dash-room-id').textContent = currentRoom;
   document.getElementById('dash-class').textContent = currentClass || '—';
   loadRoomState();
+  loadDashSchedule();
   pollInterval = setInterval(loadRoomState, 10000);
 }
 
@@ -1257,6 +1361,75 @@ async function stopSound() {
 document.getElementById('sound-alerts').addEventListener('change', function() {
   document.getElementById('alert-msg-wrap').style.display = this.checked ? 'block' : 'none';
 });
+
+// ============================================================
+// SCHEDULE
+// ============================================================
+let dashSchedule = [];
+
+async function loadDashSchedule() {
+  try {
+    const res = await api('GET', {}, { action: 'getSchedule', room: currentRoom });
+    dashSchedule = res.schedule || [];
+    renderDashSchedule();
+  } catch { dashSchedule = []; renderDashSchedule(); }
+}
+
+function renderDashSchedule() {
+  const tbody = document.getElementById('dash-schedule-tbody');
+  tbody.innerHTML = '';
+  if (dashSchedule.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1rem;color:rgba(0,0,0,0.3);font-style:italic;">No lessons yet — add one below</td></tr>';
+    return;
+  }
+  dashSchedule.forEach(row => addDashScheduleRow(row));
+}
+
+function addDashScheduleRow(data = {}) {
+  const tbody = document.getElementById('dash-schedule-tbody');
+  if (tbody.rows.length === 1 && tbody.rows[0].cells.length === 1) tbody.innerHTML = '';
+  const rowNum = tbody.rows.length + 1;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:rgba(0,0,0,0.3);width:24px;">${rowNum}</td>
+    <td><input value="${data.start || ''}" placeholder="08:15" onchange="syncDashSchedule()"></td>
+    <td><input value="${data.end || ''}" placeholder="09:00" onchange="syncDashSchedule()"></td>
+    <td><input value="${data.subject || ''}" placeholder="Maths" onchange="syncDashSchedule()"></td>
+    <td><input value="${data.teacher || ''}" placeholder="Mr Shaw" onchange="syncDashSchedule()"></td>
+    <td><button class="del-row-btn" onclick="this.closest('tr').remove();syncDashSchedule()">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function syncDashSchedule() {
+  dashSchedule = [];
+  document.querySelectorAll('#dash-schedule-tbody tr').forEach(tr => {
+    const inputs = tr.querySelectorAll('input');
+    if (inputs.length < 4) return;
+    dashSchedule.push({
+      start: inputs[0].value,
+      end: inputs[1].value,
+      subject: inputs[2].value,
+      teacher: inputs[3].value
+    });
+  });
+}
+
+async function saveDashSchedule() {
+  syncDashSchedule();
+  try {
+    const res = await api('POST', {
+      action: 'uploadSchedule',
+      pin: pin,
+      room: currentRoom,
+      schedule: dashSchedule
+    });
+    if (res.error) throw new Error(res.error);
+    showToast(`Schedule saved (${dashSchedule.length} lessons)`, 'ok');
+  } catch (e) {
+    showToast('Save failed — ' + e.message, 'err');
+  }
+}
 
 // ============================================================
 // TOAST
